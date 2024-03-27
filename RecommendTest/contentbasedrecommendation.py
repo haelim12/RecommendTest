@@ -9,11 +9,11 @@ from model.track_like import TrackLike
 session = Session()
 
 def get_feature_data(session):
-    result = session.query(Track.title, Track.spotify_id, Track.spotify_popularity, Track.feature_acousticness, Track.feature_danceability, Track.feature_energy).all()
+    result = session.query(Track.title, Track.track_id, Track.spotify_id, Track.spotify_popularity, Track.feature_acousticness, Track.feature_danceability, Track.feature_energy).all()
     return result
 
-def get_title_from_spotify_id(spotify_id, music_df):
-    return music_df[music_df.spotify_id == spotify_id]["title"].values[0]
+def get_title_from_track_id(track_id, music_df):
+    return music_df[music_df.track_id == track_id]["title"].values[0]
 
 def get_popular_tracks(session, limit=10):
     tracks = session.query(Track.title, Track.spotify_id).order_by(Track.spotify_popularity.desc()).all()
@@ -22,8 +22,8 @@ def get_popular_tracks(session, limit=10):
 
 def get_user_liked_tracks(session, user_id, limit=3):
     liked_tracks = session.query(TrackLike.track_id).filter(TrackLike.user_id == user_id, TrackLike.is_liked == True).order_by(desc(TrackLike.created_at)).limit(limit).all()
-    spotify_ids = [track_like[0] for track_like in liked_tracks]
-    return spotify_ids
+    track_ids = [track_like[0] for track_like in liked_tracks]
+    return track_ids
 
 def get_recommendations(session, user_likes=[], limit=10):
     music_df = pd.DataFrame(get_feature_data(session))  # music_df 생성
@@ -50,11 +50,11 @@ def get_recommendations(session, user_likes=[], limit=10):
     cosine_sim = cosine_similarity(count_matrix)
 
     similar_tracks = []
-    for spotify_id in user_likes:
-        music_user_likes_title = get_title_from_spotify_id(spotify_id, music_df)
+    for track_id in user_likes:
+        music_user_likes_title = get_title_from_track_id(track_id, music_df)
         print("사용자가 좋아하는 노래:", music_user_likes_title)
 
-        music_user_likes_index = music_df[music_df['spotify_id'] == spotify_id].index.values[0]
+        music_user_likes_index = music_df[music_df['track_id'] == track_id].index.values[0]
         similar_music = list(enumerate(cosine_sim[music_user_likes_index]))
         sorted_similar_music = sorted(similar_music, key=lambda x: x[1], reverse=True)[1:]
 
@@ -68,7 +68,8 @@ def get_recommendations(session, user_likes=[], limit=10):
 
 # 사용자의 ID가 user_id인 경우
 user_id = 1  # 사용자의 ID에 맞게 수정
-user_likes = [get_user_liked_tracks(session, user_id)]
+user_likes = get_user_liked_tracks(session, user_id)
+print("사용자가 좋아하는 노래!!!!!!!!!!", user_likes)
 
 recommendations = get_recommendations(session, user_likes=user_likes, limit=10)
 print("추천하는 유사한 노래:")
